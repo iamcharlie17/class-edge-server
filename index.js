@@ -47,6 +47,20 @@ async function run() {
       res.send(result);
     });
 
+    app.put('/update-user/:email', async(req, res) =>{
+      const email = req.params.email;
+      const updateInfo = req.body;
+      const query = {email: email};
+      const updateDoc = {
+        $set: {
+          name: updateInfo.name,
+          phoneNumber: updateInfo.phoneNumber
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc, {upsert: true})
+      res.send(result)
+    })
+
     //post classes by teacher....
     app.post('/add-class', async(req, res)=>{
       const classInfo = req.body;
