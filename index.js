@@ -32,12 +32,12 @@ async function run() {
     const classCollection = client.db("ClassEdge").collection("classes");
 
     app.post("/users", async (req, res) => {
-        const user = req.body;
-        const query = { email: user.email };
-        const isExist = await userCollection.findOne(query);
-        if (isExist) {
-          return res.send({ message: "already exist user" });
-        }
+      const user = req.body;
+      const query = { email: user.email };
+      const isExist = await userCollection.findOne(query);
+      if (isExist) {
+        return res.send({ message: "already exist user" });
+      }
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
@@ -53,54 +53,76 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/update-user/:email', async(req, res) =>{
+    app.put("/update-user/:email", async (req, res) => {
       const email = req.params.email;
       const updateInfo = req.body;
-      const query = {email: email};
+      const query = { email: email };
       const updateDoc = {
         $set: {
           name: updateInfo.name,
-          phoneNumber: updateInfo.phoneNumber
-        }
-      }
-      const result = await userCollection.updateOne(query, updateDoc, {upsert: true})
-      res.send(result)
-    })
+          phoneNumber: updateInfo.phoneNumber,
+        },
+      };
+      const result = await userCollection.updateOne(query, updateDoc, {
+        upsert: true,
+      });
+      res.send(result);
+    });
 
     //update user role by admin--
-    app.put('/update-user-role/:id', async(req, res) =>{
+    app.put("/update-user-role/:id", async (req, res) => {
       const id = req.params.id;
       const role = req.body;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
-          role: role.role
-        }
-      }
-      const result = await userCollection.updateOne(query, updateDoc)
-      res.send(result)
-    })
+          role: role.role,
+        },
+      };
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
+    //get all classes by admin--
+    app.get("/all-classes", async (req, res) => {
+      const result = await classCollection.find().toArray();
+      res.send(result);
+    });
+
+    //update class status by admin---
+    app.put("/update-status/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: status.status,
+        },
+      };
+      const result = await classCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     //post classes by teacher....
-    app.post('/add-class', async(req, res)=>{
+    app.post("/add-class", async (req, res) => {
       const classInfo = req.body;
-      const result = await classCollection.insertOne(classInfo)
+      const result = await classCollection.insertOne(classInfo);
       res.send(result);
-    })
+    });
 
-    //get all classes---
-    app.get('/classes/:email', async(req, res) => {
+    //get all classes for specific teacher---
+    app.get("/classes/:email", async (req, res) => {
       const email = req.params.email;
       // console.log(email)
-      const result = await classCollection.find({email:email}).toArray()
-      res.send(result)
-    })
-    //delete a class--
-    app.delete('/delete-class/:id', async(req, res) => {
+      const result = await classCollection.find({ email: email }).toArray();
+      res.send(result);
+    });
+    //delete a class by teacher--
+    app.delete("/delete-class/:id", async (req, res) => {
       const id = req.params.id;
-      const result = await classCollection.deleteOne({_id: new ObjectId(id)})
-      res.send(result)
-    })
+      const result = await classCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
