@@ -29,6 +29,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection = client.db("ClassEdge").collection("users");
+    const classCollection = client.db("ClassEdge").collection("classes");
 
     app.post("/users", async (req, res) => {
         const user = req.body;
@@ -45,6 +46,13 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
+
+    //post classes by teacher....
+    app.post('/add-class', async(req, res)=>{
+      const classInfo = req.body;
+      const result = await classCollection.insertOne(classInfo)
+      res.send(result);
+    })
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
