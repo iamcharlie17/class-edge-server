@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3200;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 //middleware
 app.use(
@@ -52,6 +52,20 @@ async function run() {
       const classInfo = req.body;
       const result = await classCollection.insertOne(classInfo)
       res.send(result);
+    })
+
+    //get all classes---
+    app.get('/classes/:email', async(req, res) => {
+      const email = req.params.email;
+      // console.log(email)
+      const result = await classCollection.find({email:email}).toArray()
+      res.send(result)
+    })
+    //delete a class--
+    app.delete('/delete-class/:id', async(req, res) => {
+      const id = req.params.id;
+      const result = await classCollection.deleteOne({_id: new ObjectId(id)})
+      res.send(result)
     })
 
     console.log(
