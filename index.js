@@ -47,6 +47,12 @@ async function run() {
       res.send(result);
     });
 
+    //all users for admin only
+    app.get("/all-users", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
     app.put('/update-user/:email', async(req, res) =>{
       const email = req.params.email;
       const updateInfo = req.body;
@@ -58,6 +64,20 @@ async function run() {
         }
       }
       const result = await userCollection.updateOne(query, updateDoc, {upsert: true})
+      res.send(result)
+    })
+
+    //update user role by admin--
+    app.put('/update-user-role/:id', async(req, res) =>{
+      const id = req.params.id;
+      const role = req.body;
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          role: role.role
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc)
       res.send(result)
     })
 
