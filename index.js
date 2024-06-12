@@ -30,7 +30,9 @@ async function run() {
   try {
     const userCollection = client.db("ClassEdge").collection("users");
     const classCollection = client.db("ClassEdge").collection("classes");
+    const teacherCollection = client.db("ClassEdge").collection("teachers");
 
+    //all users
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -42,29 +44,30 @@ async function run() {
       res.send(result);
     });
 
+    //all users
     app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
-    //get approved classes---
-    app.get('/approved-classes', async(req, res)=>{
-      const query = {status: 'approved'}
-      const result = await classCollection.find(query).toArray()
-      res.send(result)
-    })
-    //get class using id for class details--
-    app.get('/class/:id', async(req, res) =>{
+    //get approved classes for all ---
+    app.get("/approved-classes", async (req, res) => {
+      const query = { status: "approved" };
+      const result = await classCollection.find(query).toArray();
+      res.send(result);
+    });
+    //get class using id for class details users--
+    app.get("/class/:id", async (req, res) => {
       const id = req.params.id;
-      const result = await classCollection.findOne({_id: new ObjectId(id)})
-      res.send(result)
-    })
+      const result = await classCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
     //all users for admin only
     app.get("/all-users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
-
+    //for all users---
     app.put("/update-user/:email", async (req, res) => {
       const email = req.params.email;
       const updateInfo = req.body;
@@ -133,6 +136,35 @@ async function run() {
     app.delete("/delete-class/:id", async (req, res) => {
       const id = req.params.id;
       const result = await classCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+    //post teacher info from request form data---
+    app.post("/teachers", async (req, res) => {
+      const teacherInfo = req.body;
+
+      const query = { email: teacherInfo?.email };
+      const isExist = await teacherCollection.findOne(query);
+      if (isExist) {
+        const updateDoc = {
+          $set: {
+            status: teacherInfo.status,
+            name: teacherInfo.name,
+            title: teacherInfo.title,
+            category: teacherInfo.category,
+            image: teacherInfo.image,
+            experience: teacherInfo.experience,
+          },
+        };
+        await teacherCollection.updateOne(query, updateDoc);
+        return res.send({message: "teacher info updated"});
+      }
+      const result = await teacherCollection.insertOne(teacherInfo);
+      res.send(result);
+    });
+
+    //get all teachers--
+    app.get("/teachers", async (req, res) => {
+      const result = await teacherCollection.find().toArray();
       res.send(result);
     });
 
