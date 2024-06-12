@@ -52,6 +52,12 @@ async function run() {
       const result = await classCollection.find(query).toArray()
       res.send(result)
     })
+    //get class using id for class details--
+    app.get('/class/:id', async(req, res) =>{
+      const id = req.params.id;
+      const result = await classCollection.findOne({_id: new ObjectId(id)})
+      res.send(result)
+    })
 
     //all users for admin only
     app.get("/all-users", async (req, res) => {
