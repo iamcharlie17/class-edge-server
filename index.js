@@ -214,6 +214,12 @@ async function run() {
       res.send(result);
     });
 
+    //get accepted teachers (all)
+    app.get('/accepted-teachers', async(req, res)=>{
+      const result = await teacherCollection.find({status: 'accepted'}).toArray()
+      res.send(result);
+    })
+
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
