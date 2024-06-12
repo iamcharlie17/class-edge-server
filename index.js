@@ -46,6 +46,12 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
+    //get approved classes---
+    app.get('/approved-classes', async(req, res)=>{
+      const query = {status: 'approved'}
+      const result = await classCollection.find(query).toArray()
+      res.send(result)
+    })
 
     //all users for admin only
     app.get("/all-users", async (req, res) => {
