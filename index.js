@@ -156,7 +156,7 @@ async function run() {
           },
         };
         await teacherCollection.updateOne(query, updateDoc);
-        return res.send({message: "teacher info updated"});
+        return res.send({ message: "teacher info updated" });
       }
       const result = await teacherCollection.insertOne(teacherInfo);
       res.send(result);
@@ -164,7 +164,53 @@ async function run() {
 
     //get all teachers--
     app.get("/teachers", async (req, res) => {
-      const result = await teacherCollection.find().toArray();
+      const result = await teacherCollection
+        .find()
+        .sort({ status: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    //accept teacher information from request (admin)
+    app.put("/accept-teacher/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const status = req.body;
+      const updateRole = {
+        $set: {
+          role: "teacher",
+        },
+      };
+      await userCollection.updateOne(query, updateRole);
+
+      const updateStatus = {
+        $set: {
+          status: status.status,
+        },
+      };
+      const result = await teacherCollection.updateOne(query, updateStatus);
+      res.send(result);
+    });
+
+    //reject teacher information from request (admin)
+    app.put("/reject-teacher/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const status = req.body;
+
+      const updateRole = {
+        $set: {
+          role: "user",
+        },
+      };
+      await userCollection.updateOne(query, updateRole);
+
+      const updateStatus = {
+        $set: {
+          status: status.status,
+        },
+      };
+      const result = await teacherCollection.updateOne(query, updateStatus);
       res.send(result);
     });
 
