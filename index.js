@@ -33,6 +33,7 @@ async function run() {
     const classCollection = client.db("ClassEdge").collection("classes");
     const teacherCollection = client.db("ClassEdge").collection("teachers");
     const paymentCollection = client.db("ClassEdge").collection("payments");
+    const feedbackCollection = client.db("ClassEdge").collection("feedbacks");
     const submissionCollection = client
       .db("ClassEdge")
       .collection("submissions");
@@ -330,7 +331,7 @@ async function run() {
       });
       // console.log(assignment)
       await assignmentCollection.updateOne(
-        { _id: new ObjectId(submissionInfo.assignmentId)},
+        { _id: new ObjectId(submissionInfo.assignmentId) },
         { $inc: { submissions: 1 } }
       );
       const result = await classCollection.updateOne(
@@ -339,6 +340,26 @@ async function run() {
       );
       res.send(result);
     });
+
+    //post feedback (user )
+    app.post("/feedback", async (req, res) => {
+      const feedback = req.body;
+      // console.log(feedback)
+      const result = await feedbackCollection.insertOne(feedback);
+      res.send(result);
+    });
+
+    //get feedback--(all)
+    app.get("/feedback", async (req, res) => {
+      const result = await feedbackCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get('/feedback/:id', async(req, res)=>{
+      const id =req.params.id;
+      const result = await feedbackCollection.find({classId: id}).toArray()
+      res.send(result)
+    })
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
