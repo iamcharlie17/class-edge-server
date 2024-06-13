@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const app = express();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 3200;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -31,6 +32,10 @@ async function run() {
     const userCollection = client.db("ClassEdge").collection("users");
     const classCollection = client.db("ClassEdge").collection("classes");
     const teacherCollection = client.db("ClassEdge").collection("teachers");
+    const paymentCollection = client.db("ClassEdge").collection("payments");
+    const assignmentCollection = client
+      .db("ClassEdge")
+      .collection("assignments");
 
     //all users
     app.post("/users", async (req, res) => {
@@ -100,7 +105,10 @@ async function run() {
 
     //get all classes by admin--
     app.get("/all-classes", async (req, res) => {
-      const result = await classCollection.find().toArray();
+      const result = await classCollection
+        .find()
+        .sort({ status: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -122,6 +130,22 @@ async function run() {
     app.post("/add-class", async (req, res) => {
       const classInfo = req.body;
       const result = await classCollection.insertOne(classInfo);
+      res.send(result);
+    });
+    app.put("/update-class/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateInfo = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          title: updateInfo.title,
+          image: updateInfo.image,
+          price: updateInfo.price,
+          category: updateInfo.category,
+          description: updateInfo.description,
+        },
+      };
+      const result = await classCollection.updateOne(query, updateDoc);
       res.send(result);
     });
 
@@ -215,10 +239,82 @@ async function run() {
     });
 
     //get accepted teachers (all)
-    app.get('/accepted-teachers', async(req, res)=>{
-      const result = await teacherCollection.find({status: 'accepted'}).toArray()
+    app.get("/accepted-teachers", async (req, res) => {
+      const result = await teacherCollection
+        .find({ status: "accepted" })
+        .toArray();
       res.send(result);
-    })
+    });
+
+    //-------------------------------
+    //   payment gateway
+    //-------------------------------
+
+    //payment intent----
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      // console.log(price, amount)
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"], //important ----
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    //post payment information (users)
+    app.post("/payments", async (req, res) => {
+      const paymentInfo = req.body;
+      // console.log(paymentInfo);
+      const query = { _id: new ObjectId(paymentInfo.classId) };
+      const updateDoc = {
+        $inc: {
+          enroll: 1,
+        },
+      };
+      await classCollection.updateOne(query, updateDoc);
+
+      const result = await paymentCollection.insertOne(paymentInfo);
+      res.send(result);
+    });
+
+    //get all payments using user email---(user)
+    app.get("/payments/:email", async (req, res) => {
+      const email = req.params.email;
+      const payments = await paymentCollection.find({ email }).toArray();
+      const classIds = payments.map((p) => p.classId);
+      const objectIds = classIds.map(id => new ObjectId(id))
+      const query = { _id: { $in: objectIds } };
+      const result = await classCollection.find(query).toArray()
+      res.send(result)
+    });
+
+    //assignment post api--
+    app.post("/create-assignment", async (req, res) => {
+      const assignmentInfo = req.body;
+      const updateDoc = {
+        $inc: {
+          assignments: 1,
+        },
+      };
+      await classCollection.updateOne(
+        { _id: new ObjectId(assignmentInfo.classId) },
+        updateDoc
+      );
+      const result = await assignmentCollection.insertOne(assignmentInfo);
+      res.send(result);
+    });
+
+    //get assignment api
+    app.get("/assignments", async (req, res) => {
+      const result = await assignmentCollection.find().toArray();
+      res.send(result);
+    });
 
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
