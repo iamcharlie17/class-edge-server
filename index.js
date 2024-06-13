@@ -33,6 +33,9 @@ async function run() {
     const classCollection = client.db("ClassEdge").collection("classes");
     const teacherCollection = client.db("ClassEdge").collection("teachers");
     const paymentCollection = client.db("ClassEdge").collection("payments");
+    const submissionCollection = client
+      .db("ClassEdge")
+      .collection("submissions");
     const assignmentCollection = client
       .db("ClassEdge")
       .collection("assignments");
@@ -288,10 +291,10 @@ async function run() {
       const email = req.params.email;
       const payments = await paymentCollection.find({ email }).toArray();
       const classIds = payments.map((p) => p.classId);
-      const objectIds = classIds.map(id => new ObjectId(id))
+      const objectIds = classIds.map((id) => new ObjectId(id));
       const query = { _id: { $in: objectIds } };
-      const result = await classCollection.find(query).toArray()
-      res.send(result)
+      const result = await classCollection.find(query).toArray();
+      res.send(result);
     });
 
     //assignment post api--
@@ -311,8 +314,29 @@ async function run() {
     });
 
     //get assignment api
-    app.get("/assignments", async (req, res) => {
-      const result = await assignmentCollection.find().toArray();
+    app.get("/assignments/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await assignmentCollection.find({ classId: id }).toArray();
+      res.send(result);
+    });
+
+    //increment assignment submission---
+    app.put("/assignment-submission", async (req, res) => {
+      const submissionInfo = req.body;
+      await submissionCollection.insertOne(submissionInfo);
+
+      const assignment = await assignmentCollection.findOne({
+        _id: new ObjectId(submissionInfo.assignmentId),
+      });
+      // console.log(assignment)
+      await assignmentCollection.updateOne(
+        { _id: new ObjectId(submissionInfo.assignmentId)},
+        { $inc: { submissions: 1 } }
+      );
+      const result = await classCollection.updateOne(
+        { _id: new ObjectId(assignment.classId) },
+        { $inc: { submissions: 1 } }
+      );
       res.send(result);
     });
 
