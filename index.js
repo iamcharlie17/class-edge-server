@@ -106,13 +106,26 @@ async function run() {
     });
     //get approved classes for all ---
     app.get("/approved-classes", async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const query = { status: "approved" };
-      const result = await classCollection.find(query).toArray();
+      const result = await classCollection
+        .find(query)
+        .skip((page - 1) * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
+    app.get("/approved-classes-count", async (req, res) => {
+      const count = await classCollection
+        .find({ status: "approved" })
+        .toArray();
+      res.send(count);
+    });
+
     //get class using id for class details users--
-    app.get("/class/:id",verifyToken, async (req, res) => {
+    app.get("/class/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await classCollection.findOne({ _id: new ObjectId(id) });
       res.send(result);
@@ -128,12 +141,25 @@ async function run() {
     });
 
     //all users for admin only
-    app.get("/all-users",verifyToken, verifyAdmin, async (req, res) => {
-      const result = await userCollection.find().toArray();
+    app.get("/all-users", verifyToken, verifyAdmin, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size) + 1;
+      // console.log("pagination info: ", page, size);
+      const result = await userCollection
+        .find()
+        .skip((page - 1) * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
+
+    app.get("/all-users-count", verifyToken, verifyAdmin, async (req, res) => {
+      const count = await userCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+
     //for all users---
-    app.put("/update-user/:email",verifyToken, async (req, res) => {
+    app.put("/update-user/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const updateInfo = req.body;
       const query = { email: email };
@@ -150,44 +176,73 @@ async function run() {
     });
 
     //update user role by admin--
-    app.put("/update-user-role/:id",verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const role = req.body;
-      const query = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          role: role.role,
-        },
-      };
-      const result = await userCollection.updateOne(query, updateDoc);
-      res.send(result);
-    });
+    app.put(
+      "/update-user-role/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const role = req.body;
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            role: role.role,
+          },
+        };
+        const result = await userCollection.updateOne(query, updateDoc);
+        res.send(result);
+      }
+    );
 
     //get all classes by admin--
-    app.get("/all-classes",verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/all-classes", verifyToken, verifyAdmin, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const result = await classCollection
         .find()
+        .skip((page - 1) * size)
+        .limit(size)
         .sort({ status: -1 })
         .toArray();
       res.send(result);
     });
 
-    //update class status by admin---
-    app.put("/update-status/:id",verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const status = req.body;
-      const query = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          status: status.status,
-        },
-      };
-      const result = await classCollection.updateOne(query, updateDoc);
+    app.get(
+      "/all-classes-count",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const count = await classCollection.estimatedDocumentCount();
+        res.send({ count });
+      }
+    );
+
+    app.get("/all-classes-stats", async (req, res) => {
+      const result = await classCollection.find().toArray();
       res.send(result);
     });
 
+    //update class status by admin---
+    app.put(
+      "/update-status/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const status = req.body;
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            status: status.status,
+          },
+        };
+        const result = await classCollection.updateOne(query, updateDoc);
+        res.send(result);
+      }
+    );
+
     //post classes by teacher....
-    app.post("/add-class",verifyToken, async (req, res) => {
+    app.post("/add-class", verifyToken, async (req, res) => {
       const classInfo = req.body;
       const result = await classCollection.insertOne(classInfo);
       res.send(result);
@@ -210,20 +265,32 @@ async function run() {
     });
 
     //get all classes for specific teacher---
-    app.get("/classes/:email",verifyToken, async (req, res) => {
+    app.get("/classes/:email", verifyToken, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const email = req.params.email;
       // console.log(email)
+      const result = await classCollection
+        .find({ email: email })
+        .skip((page - 1) * size)
+        .limit(size + 1)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("classes/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
       const result = await classCollection.find({ email: email }).toArray();
       res.send(result);
     });
     //delete a class by teacher--
-    app.delete("/delete-class/:id",verifyToken, async (req, res) => {
+    app.delete("/delete-class/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await classCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
     //post teacher info from request form data---
-    app.post("/teachers", async (req, res) => {
+    app.post("/teachers", verifyToken, async (req, res) => {
       const teacherInfo = req.body;
 
       const query = { email: teacherInfo?.email };
@@ -247,56 +314,75 @@ async function run() {
     });
 
     //get all teachers--
-    app.get("/teachers",verifyToken, async (req, res) => {
+    app.get("/teachers", verifyToken, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size) + 1;
       const result = await teacherCollection
         .find()
+        .skip((page - 1) * size)
+        .limit(size)
         .sort({ status: -1 })
         .toArray();
       res.send(result);
     });
 
-    //accept teacher information from request (admin)
-    app.put("/accept-teacher/:email",verifyToken, verifyAdmin, async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email };
-      const status = req.body;
-      const updateRole = {
-        $set: {
-          role: "teacher",
-        },
-      };
-      await userCollection.updateOne(query, updateRole);
-
-      const updateStatus = {
-        $set: {
-          status: status.status,
-        },
-      };
-      const result = await teacherCollection.updateOne(query, updateStatus);
-      res.send(result);
+    app.get("/teachers-count", verifyToken, async (req, res) => {
+      const count = await teacherCollection.estimatedDocumentCount();
+      res.send({ count });
     });
+
+    //accept teacher information from request (admin)
+    app.put(
+      "/accept-teacher/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { email: email };
+        const status = req.body;
+        const updateRole = {
+          $set: {
+            role: "teacher",
+          },
+        };
+        await userCollection.updateOne(query, updateRole);
+
+        const updateStatus = {
+          $set: {
+            status: status.status,
+          },
+        };
+        const result = await teacherCollection.updateOne(query, updateStatus);
+        res.send(result);
+      }
+    );
 
     //reject teacher information from request (admin)
-    app.put("/reject-teacher/:email",verifyToken, verifyAdmin, async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email };
-      const status = req.body;
+    app.put(
+      "/reject-teacher/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const query = { email: email };
+        const status = req.body;
 
-      const updateRole = {
-        $set: {
-          role: "user",
-        },
-      };
-      await userCollection.updateOne(query, updateRole);
+        const updateRole = {
+          $set: {
+            role: "user",
+          },
+        };
+        await userCollection.updateOne(query, updateRole);
 
-      const updateStatus = {
-        $set: {
-          status: status.status,
-        },
-      };
-      const result = await teacherCollection.updateOne(query, updateStatus);
-      res.send(result);
-    });
+        const updateStatus = {
+          $set: {
+            status: status.status,
+          },
+        };
+        const result = await teacherCollection.updateOne(query, updateStatus);
+        res.send(result);
+      }
+    );
 
     //get accepted teachers (all)
     app.get("/accepted-teachers", async (req, res) => {
@@ -311,7 +397,7 @@ async function run() {
     //-------------------------------
 
     //payment intent----
-    app.post("/create-payment-intent",verifyToken, async (req, res) => {
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
       // console.log(price, amount)
@@ -328,7 +414,7 @@ async function run() {
     });
 
     //post payment information (users)
-    app.post("/payments",verifyToken, async (req, res) => {
+    app.post("/payments", verifyToken, async (req, res) => {
       const paymentInfo = req.body;
       // console.log(paymentInfo);
       const query = { _id: new ObjectId(paymentInfo.classId) };
@@ -344,7 +430,23 @@ async function run() {
     });
 
     //get all payments using user email---(user)
-    app.get("/payments/:email",verifyToken, async (req, res) => {
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const email = req.params.email;
+      const payments = await paymentCollection.find({ email }).toArray();
+      const classIds = payments.map((p) => p.classId);
+      const objectIds = classIds.map((id) => new ObjectId(id));
+      const query = { _id: { $in: objectIds } };
+      const result = await classCollection
+        .find(query)
+        .skip((page - 1) * size)
+        .limit(size + 1)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/payments/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const payments = await paymentCollection.find({ email }).toArray();
       const classIds = payments.map((p) => p.classId);
@@ -355,7 +457,7 @@ async function run() {
     });
 
     //assignment post api--
-    app.post("/create-assignment",verifyToken, async (req, res) => {
+    app.post("/create-assignment", verifyToken, async (req, res) => {
       const assignmentInfo = req.body;
       const updateDoc = {
         $inc: {
@@ -371,14 +473,14 @@ async function run() {
     });
 
     //get assignment api
-    app.get("/assignments/:id",verifyToken, async (req, res) => {
+    app.get("/assignments/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await assignmentCollection.find({ classId: id }).toArray();
       res.send(result);
     });
 
     //increment assignment submission---
-    app.put("/assignment-submission",verifyToken, async (req, res) => {
+    app.put("/assignment-submission", verifyToken, async (req, res) => {
       const submissionInfo = req.body;
       await submissionCollection.insertOne(submissionInfo);
 
@@ -398,7 +500,7 @@ async function run() {
     });
 
     //post feedback (user )
-    app.post("/feedback",verifyToken, async (req, res) => {
+    app.post("/feedback", verifyToken, async (req, res) => {
       const feedback = req.body;
       // console.log(feedback)
       const result = await feedbackCollection.insertOne(feedback);
@@ -411,7 +513,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/feedback/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/feedback/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const result = await feedbackCollection.find({ classId: id }).toArray();
       res.send(result);
