@@ -10,7 +10,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 //middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://class-edge.web.app",
+    ],
     credentials: true,
     optionSuccessStatus: 200,
   })
@@ -141,7 +145,7 @@ async function run() {
     });
 
     //all users for admin only
-    app.get("/all-users", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/all-users", async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size) + 1;
       // console.log("pagination info: ", page, size);
@@ -153,7 +157,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/all-users-count", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/all-users-count", async (req, res) => {
       const count = await userCollection.estimatedDocumentCount();
       res.send({ count });
     });
@@ -194,8 +198,8 @@ async function run() {
       }
     );
 
-    //get all classes by admin--
-    app.get("/all-classes", verifyToken, verifyAdmin, async (req, res) => {
+    //get all classes--
+    app.get("/all-classes",verifyToken, async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const result = await classCollection
@@ -207,15 +211,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get(
-      "/all-classes-count",
-      verifyToken,
-      verifyAdmin,
-      async (req, res) => {
-        const count = await classCollection.estimatedDocumentCount();
-        res.send({ count });
-      }
-    );
+    app.get("/all-classes-count",verifyToken, async (req, res) => {
+      const count = await classCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
 
     app.get("/all-classes-stats", async (req, res) => {
       const result = await classCollection.find().toArray();
@@ -519,9 +518,9 @@ async function run() {
       res.send(result);
     });
 
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
